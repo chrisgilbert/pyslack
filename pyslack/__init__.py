@@ -26,14 +26,11 @@ class SlackClient(object):
 
     def _make_request(self, method, params):
         """Make request to API endpoint
-
         Note: Ignoring SSL cert validation due to intermittent failures
         http://requests.readthedocs.org/en/latest/user/advanced/#ssl-cert-verification
         """
-        if self.blocked_until is not None and \
-                datetime.datetime.utcnow() < self.blocked_until:
-            raise SlackError("Too many requests - wait until {0}" \
-                    .format(self.blocked_until))
+        if self.blocked_until is not None and datetime.datetime.utcnow() < self.blocked_until:
+            raise SlackError("Too many requests - wait until {0}".format(self.blocked_until))
 
         url = "%s/%s" % (SlackClient.BASE_URL, method)
         params['token'] = self.token
@@ -51,6 +48,7 @@ class SlackClient(object):
         if not result['ok']:
             raise SlackError(result['error'])
         return result
+
 
     def channels_list(self, exclude_archived=True, **params):
         """channels.list
