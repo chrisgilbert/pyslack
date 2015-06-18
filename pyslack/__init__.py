@@ -16,14 +16,18 @@ class SlackClient(object):
         self.channels = {}
         self.ul_by_id = {}
         self.ul_by_name = {}
-        self.setup()
-
         self.blocked_until = None
         self.channel_name_id_map = {}
 
-    def setup(self):
-        self.update_user_lists_dicts()
-        self.update_channel_lists_dict()
+    def setup_cache(self, force_refresh=False):
+        """
+        Create a cache to reduce requests for users and channels
+        User force_referesh=True to rebuild it
+        """
+        if force_refresh or not self.ul_by_id:
+            self.update_user_lists_dicts()
+        if force_refresh or not self.channels:
+            self.update_channel_lists_dict()
 
     def _channel_is_name(self, channel):
         return channel.startswith('#')
@@ -132,6 +136,8 @@ class SlackClient(object):
         https://api.slack.com/methods/channels.history
         """
 
+        self.setup_cache()
+
         # Verify count is between 1 and 1000 per Slack documentation
         if count < 1 or count > 1000:
             raise SlackError("count parameter out of range (must be 1-1000)")
@@ -224,6 +230,8 @@ class SlackClient(object):
         Invite a user to a channel
         https://api.slack.com/methods/channels.invite
         """
+
+        self.setup_cache()
 
         method = 'channels.invite'
         params.update({
@@ -323,6 +331,8 @@ class SlackClient(object):
         Get list of all stars by user
         https://api.slack.com/methods/stars.list
         """
+
+        self.setup_cache()
 
         method = 'stars.list'
 
