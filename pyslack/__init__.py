@@ -32,10 +32,9 @@ class SlackClient(object):
     def _channel_is_name(self, channel):
         return channel.startswith('#')
 
-    def _make_request(self, method, params):
+    def _make_request(self, method, params, disable_cert_verification=False):
         """Make request to API endpoint
-        Note: Ignoring SSL cert validation due to intermittent failures
-        http://requests.readthedocs.org/en/latest/user/advanced/#ssl-cert-verification
+           Specify disable_cert_verification=True to skip verifying certs
         """
         if self.blocked_until is not None and \
                 datetime.datetime.utcnow() < self.blocked_until:
@@ -44,7 +43,7 @@ class SlackClient(object):
 
         url = "%s/%s" % (SlackClient.BASE_URL, method)
         params['token'] = self.token
-        response = requests.post(url, data=params, verify=False)
+        response = requests.post(url, data=params, verify=disable_cert_verification)
 
         if response.status_code == 429:
             # Too many requests
@@ -75,6 +74,7 @@ class SlackClient(object):
         """Helper name for getting a channel's id from its name
         """
         if force_lookup or not self.channel_name_id_map:
+            print("********* " + str(self.channels_list()))
             channels = self.channels_list()['channels']
             self.channel_name_id_map =\
                 {channel['name']: channel['id'] for channel in channels}
