@@ -48,8 +48,8 @@ class SlackClient(object):
         if response.status_code == 429:
             # Too many requests
             retry_after = int(response.headers.get('retry-after', '1'))
-            self.blocked_until = datetime.datetime.utcnow()
-            datetime.timedelta(seconds=retry_after)
+            self.blocked_until = datetime.datetime.utcnow() +\
+                datetime.timedelta(seconds=retry_after)
             raise SlackError("Too many requests - retry after {0} second(s)"
                              .format(retry_after))
 
@@ -74,7 +74,6 @@ class SlackClient(object):
         """Helper name for getting a channel's id from its name
         """
         if force_lookup or not self.channel_name_id_map:
-            print("********* " + str(self.channels_list()))
             channels = self.channels_list()['channels']
             self.channel_name_id_map =\
                 {channel['name']: channel['id'] for channel in channels}

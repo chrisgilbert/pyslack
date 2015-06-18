@@ -9,7 +9,8 @@ import pyslack
 
 
 class ClientTest(unittest.TestCase):
-    token = "my token"
+    token = "my key"
+    test_channel = "#channel"
 
     @patch('pyslack.SlackClient.chat_post_message')
     def test_post_message(self, client_chatpostmessage):
@@ -17,7 +18,8 @@ class ClientTest(unittest.TestCase):
         logger = logging.getLogger('test')
         logger.setLevel(logging.DEBUG)
 
-        handler = pyslack.SlackHandler('my token', '#channel', username='botname')
+        handler = pyslack.SlackHandler(self.token, self.test_channel,
+                                       username='botname')
         handler.setLevel(logging.WARNING)
         formatter = logging.Formatter('[%(levelname)s] %(message)s')
         handler.setFormatter(formatter)
@@ -26,7 +28,6 @@ class ClientTest(unittest.TestCase):
         logger.error("Oh noh!")
 
         client_chatpostmessage.assert_called_with(
-                '#channel', 
-                '[ERROR] Oh noh!',
-                username='botname')
-
+            self.test_channel,
+            '[ERROR] Oh noh!',
+            username='botname')

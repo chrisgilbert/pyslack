@@ -9,17 +9,18 @@ import pyslack
 
 
 class ClientTest(unittest.TestCase):
-    token = "my token"
+    token = "my key"
+    test_channel = '#channel'
 
     @patch('requests.post')
     def test_post_message(self, r_post):
         """A message can be posted to a channel"""
         client = pyslack.SlackClient(self.token)
 
-        reply = {"ok": True}
-        r_post.return_value.json = Mock(return_value = reply)
+        reply = {"ok": True, "channels": [{'id': 'C1234', 'name': self.test_channel}]}
+        r_post.return_value.json = Mock(return_value=reply)
 
-        result = client.chat_post_message('#channel', 'message')
+        result = client.chat_post_message(self.test_channel, 'message')
         self.assertEqual(reply, result)
 
     @patch('requests.post')
@@ -31,7 +32,7 @@ class ClientTest(unittest.TestCase):
         r_post.return_value.json.return_value = reply
 
         with self.assertRaises(pyslack.SlackError) as context:
-            client.chat_post_message('#channel', 'message')
+            client.chat_post_message(self.test_channel, 'message')
 
         self.assertEqual(context.exception.message, reply["error"])
 
@@ -45,25 +46,25 @@ class ClientTest(unittest.TestCase):
         r_post.return_value.json.return_value = reply
 
         with self.assertRaises(pyslack.SlackError) as context:
-            client.chat_post_message('#channel', 'message')
+            client.chat_post_message(self.test_channel, 'message')
 
         self.assertEqual(r_post.call_count, 1)
-        self.assertGreater(client.blocked_until, 
-                datetime.datetime.utcnow() + datetime.timedelta(seconds=8))
+        self.assertGreater(client.blocked_until,
+                           datetime.datetime.utcnow()
+                           + datetime.timedelta(seconds=8))
 
         # A second send attempt should also throw, but without creating a request
         with self.assertRaises(pyslack.SlackError) as context:
-            client.chat_post_message('#channel', 'message')
+            client.chat_post_message(self.test_channel, 'message')
 
         self.assertEqual(r_post.call_count, 1)
 
         # After the time has expired, it should be business as usual
         client.blocked_until = datetime.datetime.utcnow() - \
-                datetime.timedelta(seconds=5)
+            datetime.timedelta(seconds=5)
 
         r_post.return_value = Mock(status_code=200)
-        r_post.return_value.json.return_value = {"ok": True}
+        r_post.return_value.json.return_value = {"ok": True, "channels": [{'id': 'C1234', 'name': self.test_channel}]}
 
-        client.chat_post_message('#channel', 'message')
-        self.assertEqual(r_post.call_count, 2)
-
+        client.chat_post_message(self.test_channel, 'message')
+        self.assertEqual(r_post.call_count, 3)
