@@ -44,7 +44,6 @@ class SlackClient(object):
         url = "%s/%s" % (SlackClient.BASE_URL, method)
         params['token'] = self.token
         response = requests.post(url, data=params, verify=not disable_cert_verification)
-        print(response)
 
         if response.status_code == 429:
             # Too many requests
