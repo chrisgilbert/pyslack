@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="pyslack",
-    version="0.5.1",
+    version="0.5.2",
     description="A Python wrapper for Slack's API",
     author="@LoisaidaSam",
     author_email="sam.sandberg@gmail.com",
