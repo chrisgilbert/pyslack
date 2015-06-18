@@ -16,10 +16,14 @@ class SlackClient(object):
         self.channels = {}
         self.ul_by_id = {}
         self.ul_by_name = {}
-        self.update_channel_lists_dict()
-        self.update_user_lists_dicts()
+        self.setup()
+
         self.blocked_until = None
         self.channel_name_id_map = {}
+
+    def setup(self):
+        self.update_user_lists_dicts()
+        self.update_channel_lists_dict()
 
     def _channel_is_name(self, channel):
         return channel.startswith('#')
@@ -29,8 +33,10 @@ class SlackClient(object):
         Note: Ignoring SSL cert validation due to intermittent failures
         http://requests.readthedocs.org/en/latest/user/advanced/#ssl-cert-verification
         """
-        if self.blocked_until is not None and datetime.datetime.utcnow() < self.blocked_until:
-            raise SlackError("Too many requests - wait until {0}".format(self.blocked_until))
+        if self.blocked_until is not None and \
+                datetime.datetime.utcnow() < self.blocked_until:
+            raise SlackError("Too many requests - wait until {0}"
+                             .format(self.blocked_until))
 
         url = "%s/%s" % (SlackClient.BASE_URL, method)
         params['token'] = self.token
@@ -39,16 +45,15 @@ class SlackClient(object):
         if response.status_code == 429:
             # Too many requests
             retry_after = int(response.headers.get('retry-after', '1'))
-            self.blocked_until = datetime.datetime.utcnow() + \
-                    datetime.timedelta(seconds=retry_after)
-            raise SlackError("Too many requests - retry after {0} second(s)" \
-                    .format(retry_after))
+            self.blocked_until = datetime.datetime.utcnow()
+            datetime.timedelta(seconds=retry_after)
+            raise SlackError("Too many requests - retry after {0} second(s)"
+                             .format(retry_after))
 
         result = response.json()
         if not result['ok']:
             raise SlackError(result['error'])
         return result
-
 
     def channels_list(self, exclude_archived=True, **params):
         """channels.list
@@ -61,18 +66,19 @@ class SlackClient(object):
         method = 'channels.list'
         params.update({'exclude_archived': exclude_archived and 1 or 0})
         return self._make_request(method, params)
+
     def channel_name_to_id(self, channel_name, force_lookup=False):
         """Helper name for getting a channel's id from its name
         """
         if force_lookup or not self.channel_name_id_map:
             channels = self.channels_list()['channels']
-            self.channel_name_id_map = {channel['name']: channel['id'] for channel in channels}
-        channel = channel_name.startswith('#') and channel_name[1:] or channel_name
+            self.channel_name_id_map =\
+                {channel['name']: channel['id'] for channel in channels}
+        channel = channel_name.startswith('#') \
+            and channel_name[1:] or channel_name
         return self.channel_name_id_map.get(channel)
 
-
-
-    def chat_post_message(self, channel, text, username="cirtbot", **params):
+    def chat_post_message(self, channel, text, **params):
         """chat.postMessage
 
         This method posts a message to a channel.
@@ -82,9 +88,8 @@ class SlackClient(object):
         method = 'chat.postMessage'
 
         params.update({
-            'channel': self.channelname_to_channelid(channel),
+            'channel': self.channel_name_to_id(channel),
             'text': text,
-            'username': username
         })
 
         return self._make_request(method, params)
@@ -98,7 +103,7 @@ class SlackClient(object):
 
         method = 'chat.delete'
         params.update({
-            'channel': self.channelname_to_channelid(channel),
+            'channel': self.channel_name_to_id(channel),
             'ts': ts,
         })
 
@@ -113,7 +118,7 @@ class SlackClient(object):
 
         method = 'chat.update'
         params.update({
-            'channel': self.channelname_to_channelid(channel),
+            'channel': self.channel_name_to_id(channel),
             'ts': ts,
             'text': text,
         })
@@ -134,7 +139,7 @@ class SlackClient(object):
         method = 'channels.history'
 
         params.update({
-            'channel': self.channelname_to_channelid(channel),
+            'channel': self.channel_name_to_id(channel),
             'count': count,
         })
 
@@ -164,9 +169,9 @@ class SlackClient(object):
     def update_channel_lists_dict(self):
         """Updates the channel list dict"""
 
-        cl = self.channel_list(exclude_archived=0)
-        for c in cl['channels']:
-            self.channels[c['name']] = c
+        channel_list_ = self.channel_list(exclude_archived=0)
+        for channel_ in channel_list_['channels']:
+            self.channels[channel_['name']] = channel_
 
     def users_list(self, **params):
         """users.list
@@ -181,13 +186,14 @@ class SlackClient(object):
     def update_user_lists_dicts(self):
         """updates the user list dictionary to avoid repeated queries"""
 
-        ul = self.users_list()
-        for u in ul['members']:
-            self.ul_by_id[u['id']] = u
-            self.ul_by_name[u['name']] = u
+        user_list_ = self.users_list()
+        for user_ in user_list_['members']:
+            self.ul_by_id[user_['id']] = user_
+            self.ul_by_name[user_['name']] = user_
 
         # Special Slackbottery
-        self.ul_by_id[u'USLACKBOT'] = {u'status': None, u'profile':{}, u'name': 'Slackbot'}
+        self.ul_by_id[u'USLACKBOT'] = {u'status': None, u'profile': {},
+                                       u'name': 'Slackbot'}
 
     def auth_test(self, **params):
         """auth.test
@@ -208,7 +214,7 @@ class SlackClient(object):
 
         method = 'channels.info'
         params.update({
-            'channel' : self.channelname_to_channelid(channel)
+            'channel': self.channel_name_to_id(channel)
         })
         return self._make_request(method, params)
 
@@ -221,7 +227,7 @@ class SlackClient(object):
 
         method = 'channels.invite'
         params.update({
-            'channel': self.channelname_to_channelid(channel),
+            'channel': self.channel_name_to_id(channel),
             'user': self.ul_by_name[user]['id']
         })
 
@@ -236,7 +242,7 @@ class SlackClient(object):
 
         method = 'channels.join'
         params.update({
-            'name': self.channelname_to_channelid(channel),
+            'name': self.channel_name_to_id(channel),
         })
 
         return self._make_request(method, params)
@@ -250,7 +256,7 @@ class SlackClient(object):
 
         method = 'channels.leave'
         params.update({
-            'channel': self.channelname_to_channelid(channel),
+            'channel': self.channel_name_to_id(channel),
         })
 
         return self._make_request(method, params)
@@ -264,7 +270,7 @@ class SlackClient(object):
 
         method = 'channels.mark'
         params.update({
-            'channel': self.channelname_to_channelid(channel),
+            'channel': self.channel_name_to_id(channel),
             'ts': ts,
         })
 
@@ -279,7 +285,7 @@ class SlackClient(object):
 
         method = 'channels.setPurpose'
         params.update({
-            'channel': self.channelname_to_channelid(channel),
+            'channel': self.channel_name_to_id(channel),
             'purpose': purpose,
         })
 
@@ -294,7 +300,7 @@ class SlackClient(object):
 
         method = 'channels.setTopic'
         params.update({
-            'channel': self.channelname_to_channelid(channel),
+            'channel': self.channel_name_to_id(channel),
             'topic': topic,
         })
 
@@ -311,7 +317,7 @@ class SlackClient(object):
 
         return self._make_request(method, params)
 
-    def stars_list(self, user, count=100, page=1, **params ):
+    def stars_list(self, user, count=100, page=1, **params):
         """stars.list
 
         Get list of all stars by user
@@ -327,7 +333,6 @@ class SlackClient(object):
         })
 
         return self._make_request(method, params)
-
 
     def chat_update_message(self, channel, text, timestamp, **params):
         """chat.update
