@@ -13,6 +13,9 @@ class SlackClient(object):
 
     def __init__(self, token, verify=False):
         self.token = token
+        self.channels = {}
+        self.ul_by_id = {}
+        self.ul_by_name = {}
         self.verify = verify
         self.blocked_until = None
         self.channel_name_id_map = {}
@@ -41,7 +44,8 @@ class SlackClient(object):
 
         url = "%s/%s" % (SlackClient.BASE_URL, method)
         params['token'] = self.token
-        response = requests.post(url, data=params, verify=not disable_cert_verification)
+        response = requests.post(url, data=params,
+                                 verify=not disable_cert_verification)
 
         if response.status_code == 429:
             # Too many requests
