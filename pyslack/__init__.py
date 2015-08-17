@@ -11,11 +11,9 @@ class SlackClient(object):
 
     BASE_URL = 'https://slack.com/api'
 
-    def __init__(self, token):
+    def __init__(self, token, verify=False):
         self.token = token
-        self.channels = {}
-        self.ul_by_id = {}
-        self.ul_by_name = {}
+        self.verify = verify
         self.blocked_until = None
         self.channel_name_id_map = {}
 
@@ -373,9 +371,9 @@ class SlackHandler(logging.Handler):
     References:
     http://docs.python.org/2/library/logging.html#handler-objects
     """
-    def __init__(self, token, channel, **kwargs):
+    def __init__(self, token, channel, verify=False, **kwargs):
         super(SlackHandler, self).__init__()
-        self.client = SlackClient(token)
+        self.client = SlackClient(token, verify)
         self.channel = channel
         self._kwargs = kwargs
 
